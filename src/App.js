@@ -3,7 +3,9 @@ import {useEffect, useState} from "react";
 import Amplify, {API, graphqlOperation} from 'aws-amplify';
 import awsConfig from './aws-exports';
 import {AmplifyAuthenticator, AmplifySignOut} from '@aws-amplify/ui-react';
-import {listLists} from './graphql/queries'
+import {listLists} from './graphql/queries';
+import 'semantic-ui-css/semantic.min.css';
+import MainHeader from './components/headers/MainHeader';
 Amplify.configure(awsConfig);
 
 function App() {
@@ -18,12 +20,13 @@ function App() {
   }, [])
   return (
     <AmplifyAuthenticator>
+    <AmplifySignOut />
     <div className="App">
-      <h1>Welcome to Amplify</h1>
+      <MainHeader />
       <ul>
         {list.map(item => <li key={item.id}>{item.title}</li>)}
       </ul>
-      <AmplifySignOut />
+
     </div>
     </AmplifyAuthenticator>
   );
