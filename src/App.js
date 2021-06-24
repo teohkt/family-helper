@@ -6,28 +6,33 @@ import {AmplifyAuthenticator, AmplifySignOut} from '@aws-amplify/ui-react';
 import {listLists} from './graphql/queries';
 import 'semantic-ui-css/semantic.min.css';
 import MainHeader from './components/headers/MainHeader';
+import Lists from './components/Lists/Lists';
+import { Button, Container, Icon } from 'semantic-ui-react';
 Amplify.configure(awsConfig);
 
 function App() {
-  const [list, setList] = useState([]);
+  const [lists, setLists] = useState([]);
   async function fetchList(){
     const {data} = await API.graphql(graphqlOperation(listLists));
-    setList(data.listLists.items)
-    console.log(data)
+    setLists(data.listLists.items)
   }
   useEffect(() => {
     fetchList();
   }, [])
+
   return (
     <AmplifyAuthenticator>
     <AmplifySignOut />
-    <div className="App">
-      <MainHeader />
-      <ul>
-        {list.map(item => <li key={item.id}>{item.title}</li>)}
-      </ul>
-
-    </div>
+    <Button className="floatingButton">
+      <Icon name="plus" className="floatingButton_icon"/>
+    </Button>
+    <Container>
+      <div className="App">
+        <MainHeader />
+        <Lists lists={lists} />
+      </div>
+    </Container>
+    
     </AmplifyAuthenticator>
   );
 }
