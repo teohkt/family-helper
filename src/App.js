@@ -14,7 +14,8 @@ Amplify.configure(awsConfig);
 
 const initialState = {
   title: '',
-  description: ''
+  description: '',
+  isModalOpen: false
 }
 let listReducer = (state = initialState, action) => {
   switch(action.type){
@@ -22,6 +23,10 @@ let listReducer = (state = initialState, action) => {
       return {...state, description: action.value}
     case 'TITLE_CHANGED':
       return {...state, title: action.value}
+    case 'MODAL_OPEN':
+      return {...state, isModalOpen: true}
+    case 'MODAL_CLOSE':
+      return {...state, isModalOpen: false, title: '', description: ''}
     default:
       console.log('Default action for ', action)
       return state
@@ -33,7 +38,7 @@ function App() {
 
   const [lists, setLists] = useState([]);
   const [newList, setNewList] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
+
   async function fetchList(){
     const {data} = await API.graphql(graphqlOperation(listLists));
     setLists(data.listLists.items)
@@ -46,6 +51,7 @@ function App() {
   useEffect(()=>{
     if(newList !==''){
       setLists([newList, ...lists])
+      setNewList("")
     }
   }, [newList, lists])
 
@@ -62,20 +68,16 @@ function App() {
       })
   }, [])
 
-  let toggleModal = (toggleValue) => {
-    setIsModalOpen(toggleValue)
-  }
-
   let saveList = async () => {
     const { title, description } = state;
     const result = await API.graphql(graphqlOperation(createList, {input: {title, description}}));
-    toggleModal(false);
+    dispatch({type: 'MODAL_CLOSE'});
   }
 
   return (
     <AmplifyAuthenticator>
     <AmplifySignOut />
-    <Button className="floatingButton" onClick={() => toggleModal(true)}>
+    <Button className="floatingButton" onClick={() => dispatch({type: 'MODAL_OPEN'})}>
       <Icon name="plus" className="floatingButton_icon"/>
     </Button>
     <Container>
@@ -84,7 +86,7 @@ function App() {
         <Lists lists={lists} />
       </div>
     </Container>
-    <Modal open={isModalOpen} dimmer="inverted">
+    <Modal open={state.isModalOpen} dimmer="inverted">
       <Modal.Header>Create your list</Modal.Header>
       <Modal.Content>
         <Form>
@@ -93,7 +95,7 @@ function App() {
         </Form>
       </Modal.Content>
       <Modal.Actions>
-        <Button negative onClick={() => toggleModal(false)}>Cancel</Button>
+        <Button negative onClick={() => dispatch({type: 'MODAL_CLOSE'})}>Cancel</Button>
         <Button positive onClick={saveList}>Save</Button>
       </Modal.Actions>
     </Modal>
