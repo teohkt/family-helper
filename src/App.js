@@ -1,5 +1,5 @@
 import './App.css';
-import {useEffect, useState, useReducer} from "react";
+import {useEffect, useReducer} from "react";
 import Amplify, {API, graphqlOperation} from 'aws-amplify';
 import awsConfig from './aws-exports';
 import {AmplifyAuthenticator, AmplifySignOut} from '@aws-amplify/ui-react';
@@ -15,6 +15,7 @@ Amplify.configure(awsConfig);
 const initialState = {
   title: '',
   description: '',
+  lists: [],
   isModalOpen: false
 }
 let listReducer = (state = initialState, action) => {
@@ -23,12 +24,13 @@ let listReducer = (state = initialState, action) => {
       return {...state, description: action.value}
     case 'TITLE_CHANGED':
       return {...state, title: action.value}
+    case 'UPDATE_LISTS':
+      return {...state, lists: [...action.value, ...state.lists]}
     case 'MODAL_OPEN':
       return {...state, isModalOpen: true}
     case 'MODAL_CLOSE':
       return {...state, isModalOpen: false, title: '', description: ''}
     default:
-      console.log('Default action for ', action)
       return state
   }
 }
@@ -36,12 +38,9 @@ let listReducer = (state = initialState, action) => {
 function App() {
   const [state, dispatch] = useReducer(listReducer, initialState)
 
-  const [lists, setLists] = useState([]);
-  const [newList, setNewList] = useState('')
-
   async function fetchList(){
     const {data} = await API.graphql(graphqlOperation(listLists));
-    setLists(data.listLists.items)
+    dispatch({ type: 'UPDATE_LISTS', value: data.listLists.items })
   }
 
   useEffect(() => {
@@ -49,28 +48,20 @@ function App() {
   }, []);
 
   useEffect(()=>{
-    if(newList !==''){
-      setLists([newList, ...lists])
-      setNewList("")
-    }
-  }, [newList, lists])
-
-  let addToList = ({data}) => {
-    setNewList(data.onCreateList)
-  }
-
-  useEffect(()=>{
     let subscription = API
       .graphql(graphqlOperation(onCreateList))
       .subscribe({
-        next: ({provider, value}) => addToList(value),
+        next: ({provider, value}) => {
+          dispatch({type: 'UPDATE_LISTS', value: [value.data.onCreateList]})
+        },
         error: error => console.warn(error)
       })
+    return () => subscription.unsubscribe()
   }, [])
 
-  let saveList = async () => {
+  async function saveList() {
     const { title, description } = state;
-    const result = await API.graphql(graphqlOperation(createList, {input: {title, description}}));
+    await API.graphql(graphqlOperation(createList, {input: {title, description}}));
     dispatch({type: 'MODAL_CLOSE'});
   }
 
@@ -83,7 +74,7 @@ function App() {
     <Container>
       <div className="App">
         <MainHeader />
-        <Lists lists={lists} />
+        <Lists lists={state.lists} />
       </div>
     </Container>
     <Modal open={state.isModalOpen} dimmer="inverted">
