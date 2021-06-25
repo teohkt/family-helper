@@ -9,6 +9,7 @@ import MainHeader from './components/headers/MainHeader';
 import Lists from './components/Lists/Lists';
 import { Button, Container, Form, Icon, Modal } from 'semantic-ui-react';
 import { createList } from './graphql/mutations';
+import { onCreateList } from './graphql/subscriptions'
 Amplify.configure(awsConfig);
 
 const initialState = {
@@ -31,6 +32,7 @@ function App() {
   const [state, dispatch] = useReducer(listReducer, initialState)
 
   const [lists, setLists] = useState([]);
+  const [newList, setNewList] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   async function fetchList(){
     const {data} = await API.graphql(graphqlOperation(listLists));
@@ -40,6 +42,25 @@ function App() {
   useEffect(() => {
     fetchList();
   }, []);
+
+  useEffect(()=>{
+    if(newList !==''){
+      setLists([newList, ...lists])
+    }
+  }, [newList, lists])
+
+  let addToList = ({data}) => {
+    setNewList(data.onCreateList)
+  }
+
+  useEffect(()=>{
+    let subscription = API
+      .graphql(graphqlOperation(onCreateList))
+      .subscribe({
+        next: ({provider, value}) => addToList(value),
+        error: error => console.warn(error)
+      })
+  }, [])
 
   let toggleModal = (toggleValue) => {
     setIsModalOpen(toggleValue)
