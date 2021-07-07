@@ -5,20 +5,25 @@ import awsConfig from './aws-exports'
 import { AmplifyAuthenticator, AmplifySignOut } from '@aws-amplify/ui-react'
 import { listLists } from './graphql/queries'
 import 'semantic-ui-css/semantic.min.css'
+import { Button, Container, Icon } from 'semantic-ui-react'
+import { deleteList } from './graphql/mutations'
+import { onCreateList, onDeleteList, onUpdateList } from './graphql/subscriptions'
+
 import MainHeader from './components/headers/MainHeader'
 import Lists from './components/Lists/Lists'
-import { Button, Container, Form, Icon, Modal } from 'semantic-ui-react'
-import { createList, deleteList } from './graphql/mutations'
-import { onCreateList, onDeleteList } from './graphql/subscriptions'
+import ListModal from './components/modals/ListModal'
 Amplify.configure(awsConfig)
 
 const initialState = {
+  id: '',
   title: '',
   description: '',
   lists: [],
   isModalOpen: false,
+  modalType: ''
 }
 let listReducer = (state = initialState, action) => {
+  let newList
   switch (action.type) {
     case 'DESCRIPTION_CHANGED':
       return { ...state, description: action.value }
@@ -27,17 +32,30 @@ let listReducer = (state = initialState, action) => {
     case 'UPDATE_LISTS':
       return { ...state, lists: [...action.value, ...state.lists] }
     case 'MODAL_OPEN':
-      return { ...state, isModalOpen: true }
+      return { ...state, isModalOpen: true, modalType: 'add'}
     case 'MODAL_CLOSE':
-      return { ...state, isModalOpen: false, title: '', description: '' }
+      return { ...state, isModalOpen: false, title: '', description: '', id:'' }
     case 'DELETE_LIST':
-      console.log(action.value)
       deleteListById(action.value)
       return { ...state }
     case 'DELETE_LIST_RESULT':
-      const newList = state.lists.filter((item) => item.id !== action.value)
+      newList = state.lists.filter((item) => item.id !== action.value)
+      return { ...state, lists: newList }
+    case 'EDIT_LIST': {
+      const newValue = {...action.value}
+      delete newValue.children
+      delete newValue.listItems
+      delete newValue.dispatch
+      return {...state, isModalOpen: true, modalType: 'edit', id:newValue.id, title:newValue.title, description: newValue.description}
+    }
+    case 'UPDATE_LIST_RESULT':
+      const index = state.lists.findIndex(item => item.id === action.value.id)
+      newList = [...state.lists]
+      delete action.value.listItems
+      newList[index] = action.value
       return { ...state, lists: newList }
     default:
+      console.log('Default action for: ', action)
       return state
   }
 }
@@ -60,29 +78,30 @@ function App() {
   }, [])
 
   useEffect(() => {
-    let createListSub = API.graphql(graphqlOperation(onCreateList)).subscribe({
-      next: ({ provider, value }) => {
+    const createListSub = API.graphql(graphqlOperation(onCreateList)).subscribe({
+      next: ({ _, value }) => {
         dispatch({ type: 'UPDATE_LISTS', value: [value.data.onCreateList] })
       },
       error: (error) => console.warn(error),
     })
-    let deleteListSub = API.graphql(graphqlOperation(onDeleteList)).subscribe({
-      next: ({ provider, value }) => {
+    const deleteListSub = API.graphql(graphqlOperation(onDeleteList)).subscribe({
+      next: ({ _, value }) => {
         dispatch({ type: 'DELETE_LIST_RESULT', value: value.data.onDeleteList.id })
+      },
+      error: (error) => console.warn(error),
+    })
+    const updateListSub = API.graphql(graphqlOperation(onUpdateList)).subscribe({
+      next: ({ _, value }) => {
+        dispatch({ type: 'UPDATE_LIST_RESULT', value: value.data.onUpdateList })
       },
       error: (error) => console.warn(error),
     })
     return () => {
       createListSub.unsubscribe()
       deleteListSub.unsubscribe()
+      updateListSub.unsubscribe()
     }
   }, [])
-
-  async function saveList() {
-    const { title, description } = state
-    await API.graphql(graphqlOperation(createList, { input: { title, description } }))
-    dispatch({ type: 'MODAL_CLOSE' })
-  }
 
   return (
     <AmplifyAuthenticator>
@@ -96,34 +115,7 @@ function App() {
           <Lists lists={state.lists} dispatch={dispatch} />
         </div>
       </Container>
-      <Modal open={state.isModalOpen} dimmer='inverted'>
-        <Modal.Header>Create your list</Modal.Header>
-        <Modal.Content>
-          <Form>
-            <Form.Input
-              label='Title'
-              placeholder='My Story'
-              value={state.title}
-              onChange={(e) => dispatch({ type: 'TITLE_CHANGED', value: e.target.value })}
-              error={true ? false : { content: 'Please add a name to your list' }}
-            ></Form.Input>
-            <Form.TextArea
-              label='Description'
-              placeholder='The Recording'
-              value={state.description}
-              onChange={(e) => dispatch({ type: 'DESCRIPTION_CHANGED', value: e.target.value })}
-            ></Form.TextArea>
-          </Form>
-        </Modal.Content>
-        <Modal.Actions>
-          <Button negative onClick={() => dispatch({ type: 'MODAL_CLOSE' })}>
-            Cancel
-          </Button>
-          <Button positive onClick={saveList}>
-            Save
-          </Button>
-        </Modal.Actions>
-      </Modal>
+      <ListModal state={state} dispatch={dispatch}/>
     </AmplifyAuthenticator>
   )
 }
