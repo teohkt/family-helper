@@ -5,7 +5,7 @@ function List(props) {
   const { id, title, description, createdAt, dispatch } = props
   return (
     <Item>
-      <Item.Image src='https://react.semantic-ui.com/images/wireframe/image.png'></Item.Image>
+      <Item.Image src='https://react.semantic-ui.com/images/wireframe/image.png' />
       <Item.Content>
         <Item.Header>{title}</Item.Header>
         <Item.Description>{description}</Item.Description>

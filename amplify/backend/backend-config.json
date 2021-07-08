@@ -23,5 +23,11 @@
         }
       }
     }
+  },
+  "storage": {
+    "familyHelperBucket": {
+      "service": "S3",
+      "providerPlugin": "awscloudformation"
+    }
   }
 }
