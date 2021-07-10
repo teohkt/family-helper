@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect} from 'react'
+import React, {useRef, useState } from 'react'
 import { Button, Header, Image } from 'semantic-ui-react'
 
 const UploadImage = ({ getSelectedFile }) => {
@@ -12,7 +12,6 @@ const UploadImage = ({ getSelectedFile }) => {
     setImage(fileSampleUrl)
     getSelectedFile(fileToUpload)
   } 
-
 
   return (
     <>
