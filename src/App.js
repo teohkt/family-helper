@@ -8,7 +8,7 @@ function App() {
     <BrowserRouter>
       <Switch>
         <Route path="/" exact><Main /></Route>
-        <Route path="/list"><List /></Route>
+        <Route path="/list/:slug" render={(props)=>{return <List {...props} />}} />
       </Switch>
     </BrowserRouter>
   )
