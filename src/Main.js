@@ -10,8 +10,11 @@ import { deleteList } from './graphql/mutations'
 import { onCreateList, onDeleteList, onUpdateList } from './graphql/subscriptions'
 
 import MainHeader from './components/headers/MainHeader'
-import Lists from './components/Lists/Lists'
 import ListModal from './components/modals/ListModal'
+import Lists from './components/Lists/Lists'
+import { BrowserRouter, Route, Switch } from 'react-router-dom'
+import ListItems from './ListItems'
+
 Amplify.configure(awsConfig)
 
 const initialState = {
@@ -112,7 +115,16 @@ function Main() {
       <Container>
         <div className='App'>
           <MainHeader />
-          <Lists lists={state.lists} dispatch={dispatch} />
+
+          <BrowserRouter>
+            <Switch>
+              <Route path="/" exact><Lists lists={state.lists} dispatch={dispatch} /></Route>
+              <Route path="/list/:slug" render={(props)=>{return <ListItems {...state.lists.filter(i => i.slug === props.match.params.slug)[0]} />}} />
+            </Switch>
+          </BrowserRouter>
+
+
+
         </div>
       </Container>
       <ListModal state={state} dispatch={dispatch}/>
